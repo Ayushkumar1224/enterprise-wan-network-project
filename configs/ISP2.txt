@@ -1,0 +1,50 @@
+
+hostname ISP2
+
+
+
+interface Loopback0
+ ip address 192.0.2.1 255.255.255.255
+!
+interface Serial0/0/1
+ description Connected to HO (198.80.2.0/30)
+ ip address 198.80.2.2 255.255.255.252
+ clock rate 64000
+ no shutdown
+!
+interface Serial0/1/1
+ description Connected to BO (199.80.2.0/30)
+ ip address 199.80.2.2 255.255.255.252
+ no shutdown
+!
+
+
+! 
+ip route 198.80.1.0 255.255.255.252 Serial0/0/1
+ip route 199.80.1.0 255.255.255.252 Serial0/1/1
+
+
+! 
+ip nat inside source static 192.168.4.5 201.80.1.2
+ip nat inside source list 1 interface Serial0/0/1 overload
+
+
+interface Serial0/0/1
+ ip nat outside
+!
+interface Serial0/1/1
+ ip nat outside
+!
+
+! 
+access-list 1 permit 192.168.0.0 0.0.255.255
+access-list 100 permit tcp any any established
+access-list 101 permit tcp any host 201.80.1.2 eq www
+
+! 
+line vty 0 4
+ password cisco
+ login
+ transport input telnet ssh
+!
+end

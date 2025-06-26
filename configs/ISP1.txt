@@ -1,0 +1,51 @@
+
+hostname ISP1
+
+
+interface lo0
+  ip address 192.168.4.5 255.255.255.252
+  no shutdown
+  ip nat inside
+ negotiation auto
+interface Serial0/1/0
+ ip address 199.80.1.2 255.255.255.252
+ no shutdown 
+ clock rate 64000
+ exit
+
+!
+interface Serial0/1/1
+ ip address 198.80.1.2 255.255.255.252
+ no shutdown
+!
+router ospf 1
+ router-id 3.3.3.3
+ network 198.80.1.0 0.0.0.3 area 0
+ network 199.80.1.0 0.0.0.3 area 0
+!
+
+end
+ip route 0.0.0.0 0.0.0.0 198.80.1.2
+ip route 172.31.79.0 255.255.255.0 198.80.1.1  
+ip route 172.31.78.0 255.255.255.0 199.80.1.1  
+ip ssh version 2
+
+banner motd ^CWARNING: Unauthorized access to ISPRouter is prohibited.^C
+!
+line con 0
+ password cisco
+ logging synchronous
+ login
+ stopbits 1
+line aux 0
+ no exec
+line vty 0 4
+ password cisco
+ login local
+ transport input ssh
+line vty 5 14
+ login
+ transport input ssh
+
+!
+end

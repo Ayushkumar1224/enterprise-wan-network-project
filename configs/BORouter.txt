@@ -1,0 +1,130 @@
+
+hostname BORouter
+!
+
+!
+ip domain name netsecure.com
+
+!
+username SysAdmin privilege 15 secret 5 $1$U4cN$gco8vomcfuDk9YSFMp2l51
+!
+!
+ip ssh version 2
+!
+!
+crypto isakmp policy 10
+ encr aes
+ hash sha256
+ authentication pre-share
+ group 14
+ lifetime 86400
+crypto isakmp key TechSecureKey address 198.80.1.1
+!
+!
+crypto ipsec transform-set TRANSFORM esp-aes esp-sha-hmac
+ mode tunnel
+!
+!
+!
+crypto map VPN-MAP 10 ipsec-isakmp
+ set peer 198.80.1.1
+ set transform-set TRANSFORM
+ match address VPN-ACL
+
+!
+!
+!
+!
+!
+interface Tunnel0
+ ip address 172.20.80.2 255.255.255.252
+ tunnel source s0/0/1
+ tunnel destination 198.80.1.1
+!
+
+interface GigabitEthernet0/0
+ ip address 172.31.78.1 255.255.255.0
+ no shutdown
+ ip nat inside
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet0/0.10
+ encapsulation dot1Q 10
+ ip address 172.31.81.1 255.255.255.192
+!
+interface GigabitEthernet0/0.20
+ encapsulation dot1Q 20
+ ip address 172.31.81.65 255.255.255.192
+!
+interface GigabitEthernet0/0.30
+ encapsulation dot1Q 30
+ ip address 172.31.81.129 255.255.255.224
+!
+interface GigabitEthernet0/0.40
+ encapsulation dot1Q 40
+ ip address 172.31.81.161 255.255.255.224
+!
+interface GigabitEthernet0/0.50
+ encapsulation dot1Q 50
+ ip address 172.31.81.193 255.255.255.224
+!
+
+!
+
+!
+interface Serial0/0/1
+ ip address 199.80.1.1 255.255.255.252
+ no shutdown
+ ip nat outside
+ encapsulation ppp
+ crypto map VPN-MAP
+!
+router ospf 1
+ router-id 2.2.2.2
+ network 172.31.78.0 0.0.0.255 area 0       
+ network 172.31.81.0 0.0.0.255 area 0       
+ network 199.80.1.0 0.0.0.3 area 0
+ network 172.20.80.0 0.0.0.3 area 0 
+ip forward-protocol nd
+!
+no ip http server
+no ip http secure-server
+!
+ip nat pool BO_POOL 208.80.1.240 208.80.1.245 netmask 255.255.255.248
+ip nat inside source list NAT-ACL pool BO_POOL overload
+ip route 0.0.0.0 0.0.0.0 199.80.1.2
+
+!
+ip access-list extended VPN-ACL
+ permit gre host 198.80.1.1 host 199.80.1.1
+
+ip access-list standard NAT-ACL
+ permit 172.31.78.0 0.0.0.255
+ permit 172.31.81.0 0.0.0.255
+
+ip access-list extended OUTBOUND-ACL
+ permit tcp 172.31.78.0 0.0.0.255 any eq www
+ permit tcp 172.31.81.0 0.0.0.255 any eq www
+ permit tcp 172.31.78.0 0.0.0.255 any eq 443
+ permit tcp 172.31.81.0 0.0.0.255 any eq 443
+ip access-list extended INBOUND-ACL
+ permit tcp any any established
+
+!
+!
+!
+banner motd ^CWARNING: Unauthorized access to BORouter is prohibited.^C
+!
+line con 0
+ password cisco
+ logging synchronous
+ login
+line aux 0
+ no exec
+line vty 0 4
+ password cisco
+ login local
+ transport input ssh
+
+end

@@ -1,0 +1,111 @@
+
+hostname HORouter
+
+!
+ip domain name techguard.com
+!
+!
+
+!
+username ITStaff privilege 15 secret 9 $9$dX.7Hhv12msZPU$RXmY/NMbRk99zq.08WMQ7tq2SIBmmBQMxeJuQboxPlA
+!
+!
+crypto isakmp policy 10
+ encr aes
+ hash sha256
+ authentication pre-share
+ group 14
+ lifetime 86400
+
+crypto isakmp key TechSecureKey address 199.80.1.1
+!
+!
+crypto ipsec transform-set TRANSFORM esp-aes esp-sha-hmac
+ mode tunnel
+
+!
+!
+!
+crypto map VPN-MAP 10 ipsec-isakmp
+ set peer 199.80.1.1
+ set transform-set TRANSFORM
+ match address VPN-ACL
+
+!
+
+!
+interface Tunnel0
+ ip address 172.20.80.1 255.255.255.252
+ tunnel source s0/1/0
+ tunnel destination 199.80.1.1
+!
+interface GigabitEthernet0/0/0
+ ip address 172.31.79.1 255.255.255.0
+ no shutdown
+ ip nat inside
+ negotiation auto
+
+!
+interface GigabitEthernet0/0/0.10
+ encapsulation dot1Q 10
+ ip address 172.31.80.1 255.255.255.128
+!
+interface GigabitEthernet0/0/0.20
+ encapsulation dot1Q 20
+ ip address 172.31.80.129 255.255.255.192
+!
+interface GigabitEthernet0/0/0.30
+ encapsulation dot1Q 30
+ ip address 172.31.80.193 255.255.255.192
+!
+!
+interface Serial0/1/0
+ ip address 198.80.1.1 255.255.255.252
+ no shutdown
+ ip nat outside
+ clock rate 64000
+ crypto map VPN-MAP
+ 
+
+!
+
+!
+router ospf 1
+ router-id 1.1.1.1
+ network 172.31.79.0 0.0.0.255 area 0
+ network 172.31.80.0 0.0.0.255 area 0
+ network 198.80.1.0 0.0.0.3 area 0
+ network 172.20.80.0 0.0.0.3 area 0
+!
+ip nat pool HO_POOL 208.80.1.240 208.80.1.245 netmask 255.255.255.248
+ip nat inside source list NAT-ACL pool HO_POOL overload
+ip route 0.0.0.0 0.0.0.0 198.80.1.2
+ip ssh version 2
+!
+!
+ip access-list extended VPN-ACL
+ permit gre host 198.80.1.1 host 199.80.1.1
+ip access-list standard NAT-ACL
+ permit 172.31.80.0 0.0.0.255
+ permit 172.31.81.0 0.0.0.255  
+
+!
+banner motd ^CWARNING: Unauthorized access to HORouter is prohibited.^C
+!
+line con 0
+ password 7 00271A150754
+ logging synchronous
+ login
+ stopbits 1
+line aux 0
+ no exec
+line vty 0 4
+ password 7 0802455D0A16
+ login local
+ transport input ssh
+line vty 5 14
+ login
+ transport input ssh
+!
+!
+end
